@@ -3,39 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixel Hunt Game - Hard Mode</title>
+    <title>Pixel Hunt - Вибір складності</title>
     <style>
         body {
             margin: 0;
             padding: 0;
             overflow: hidden;
-            font-family: Arial, sans-serif;
-            background-color: white;
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
+        /* Меню вибору складності */
+        #menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            z-index: 10;
+        }
+
+        #menu h2 { margin-top: 0; color: #333; }
+
+        .btn-group { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+
+        .difficulty-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+            transition: 0.3s;
+        }
+
+        .easy { background-color: #2ecc71; }
+        .medium { background-color: #f1c40f; }
+        .hard { background-color: #e74c3c; }
+        
+        .difficulty-btn:hover { opacity: 0.8; transform: translateY(-2px); }
+
+        /* Інтерфейс гри */
         #info {
             padding: 20px;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
+            color: #2c3e50;
+            width: 100%;
+            text-align: center;
         }
 
         #target {
-            width: 50px;
-            height: 50px;
             background-color: red;
             position: absolute;
             cursor: pointer;
-            /* Додаємо плавність для ефекту зменшення квадрата */
-            transition: width 0.2s, height 0.2s; 
+            display: none; /* Ховаємо до початку гри */
+            border-radius: 5px;
+            transition: width 0.2s, height 0.2s;
         }
     </style>
 </head>
 <body>
 
+    <div id="menu">
+        <h2>Оберіть складність</h2>
+        <div class="btn-group">
+            <button class="difficulty-btn easy" onclick="startGame('easy')">Легко</button>
+            <button class="difficulty-btn medium" onclick="startGame('medium')">Середньо</button>
+            <button class="difficulty-btn hard" onclick="startGame('hard')">Важко</button>
+        </div>
+    </div>
+
     <div id="info">
-        <p id="scoreText">score: 0</p>
-        <p id="timeText">time left for click: 3</p>
-        <p id="levelText">level: 1</p> </div>
+        <span>Рахунок: <span id="scoreText">0</span></span> | 
+        <span>Час: <span id="timeText">0</span>с</span>
+    </div>
 
     <div id="target"></div>
 
@@ -43,22 +92,40 @@
         const target = document.getElementById("target");
         const scoreText = document.getElementById("scoreText");
         const timeText = document.getElementById("timeText");
-        const levelText = document.getElementById("levelText");
+        const menu = document.getElementById("menu");
 
-        // Змінні стану гри
         let score = 0;
-        let currentLevelTime = 3; // Базовий час, який дається на поточному рівні
-        let timeLeft = currentLevelTime; 
-        let targetSize = 50; // Початковий розмір квадрата
+        let timeLeft = 0;
         let timerId;
+        let currentSettings = { size: 50, time: 3 }; // Значення за замовчуванням
+
+        // Функція запуску гри з обраною складністю
+        function startGame(mode) {
+            // 1. Ховаємо меню
+            menu.style.display = "none";
+            target.style.display = "block";
+
+            // 2. Встановлюємо параметри залежно від вибору
+            if (mode === 'easy') {
+                currentSettings = { size: 60, time: 4 }; // Великий квадрат, багато часу
+            } else if (mode === 'medium') {
+                currentSettings = { size: 40, time: 2.5 }; // Середній
+            } else if (mode === 'hard') {
+                currentSettings = { size: 25, time: 1.5 }; // Маленький і швидкий
+            }
+
+            resetStats();
+            moveTarget();
+            startTimer();
+        }
 
         function moveTarget() {
+            // Враховуємо розмір цілі, щоб вона не виходила за межі вікна
             const maxX = window.innerWidth - target.offsetWidth;
             const maxY = window.innerHeight - target.offsetHeight;
 
             const randomX = Math.floor(Math.random() * maxX);
-            // Залишаємо відступ зверху, щоб квадрат не перекривав текст
-            const randomY = Math.floor(Math.random() * (maxY - 140)) + 140;
+            const randomY = Math.floor(Math.random() * (maxY - 100)) + 100;
 
             target.style.left = randomX + "px";
             target.style.top = randomY + "px";
@@ -66,73 +133,39 @@
 
         function startTimer() {
             clearInterval(timerId);
-            timerId = setInterval(function() {
-                timeLeft--;
-                timeText.textContent = "time left for click: " + timeLeft;
+            timerId = setInterval(() => {
+                timeLeft = (parseFloat(timeLeft) - 0.1).toFixed(1);
+                timeText.textContent = timeLeft;
 
                 if (timeLeft <= 0) {
                     clearInterval(timerId);
                     alert("Гра закінчена! Ваш рахунок: " + score);
-                    resetGame();
+                    location.reload(); // Повертаємо до меню вибору
                 }
-            }, 1000);
+            }, 100);
         }
 
-        function resetGame() {
-            // Скидаємо всі змінні до початкових значень
+        function resetStats() {
             score = 0;
-            currentLevelTime = 3;
-            timeLeft = currentLevelTime;
-            targetSize = 50; 
+            timeLeft = currentSettings.time;
+            target.style.width = currentSettings.size + "px";
+            target.style.height = currentSettings.size + "px";
             
-            // Відновлюємо розмір квадрата
-            target.style.width = targetSize + "px";
-            target.style.height = targetSize + "px";
-            
-            // Оновлюємо текст
-            scoreText.textContent = "score: " + score;
-            timeText.textContent = "time left for click: " + timeLeft;
-            levelText.textContent = "level: 1";
-            
-            moveTarget();
-            clearInterval(timerId); 
+            scoreText.textContent = score;
+            timeText.textContent = timeLeft;
         }
 
-        target.addEventListener("click", function() {
+        target.addEventListener("click", () => {
             score++;
+            scoreText.textContent = score;
             
-            // --- ЛОГІКА ПРОГРЕСИВНОЇ СКЛАДНОСТІ ---
-            
-            // 1. Зменшуємо розмір квадрата з кожним кліком (мінімум до 15px)
-            if (targetSize > 15) {
-                targetSize -= 2; 
-                target.style.width = targetSize + "px";
-                target.style.height = targetSize + "px";
-            }
-
-            // 2. Кожні 5 балів ускладнюємо гру, зменшуючи час на клік (мінімум до 1 секунди)
-            if (score % 5 === 0 && currentLevelTime > 1) {
-                currentLevelTime--;
-            }
-            
-            // Вираховуємо рівень складності для відображення (1, 2, 3)
-            let level = 4 - currentLevelTime; 
-            levelText.textContent = "level: " + level;
-            
-    
-
-            // Оновлюємо час таймера до нового ускладненого значення
-            timeLeft = currentLevelTime; 
-            scoreText.textContent = "score: " + score;
-            timeText.textContent = "time left for click: " + timeLeft;
+            // Складність: трохи зменшуємо час після кожного вдалого кліку (прогресія)
+            timeLeft = (currentSettings.time - (score * 0.05)).toFixed(1);
+            if (timeLeft < 0.8) timeLeft = 0.8; // Мінімальний ліміт часу
 
             moveTarget();
-            startTimer();
         });
-
-        resetGame();
 
     </script>
 </body>
 </html>
-
