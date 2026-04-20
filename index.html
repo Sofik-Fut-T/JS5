@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixel Hunt Game</title>
+    <title>Pixel Hunt Game - Hard Mode</title>
     <style>
-        /* Базові стилі, щоб прибрати відступи і заборонити прокрутку */
         body {
             margin: 0;
             padding: 0;
@@ -14,20 +13,20 @@
             background-color: white;
         }
 
-        /* Стилі для блоку з інформацією (рахунок і час) */
         #info {
             padding: 20px;
             font-size: 18px;
             font-weight: bold;
         }
 
-        /* Стилі для нашої цілі - червоного квадрата */
         #target {
             width: 50px;
             height: 50px;
             background-color: red;
-            position: absolute; /* Дозволяє вільно рухати квадрат по екрану */
+            position: absolute;
             cursor: pointer;
+            /* Додаємо плавність для ефекту зменшення квадрата */
+            transition: width 0.2s, height 0.2s; 
         }
     </style>
 </head>
@@ -36,81 +35,101 @@
     <div id="info">
         <p id="scoreText">score: 0</p>
         <p id="timeText">time left for click: 3</p>
-    </div>
+        <p id="levelText">level: 1</p> </div>
 
     <div id="target"></div>
 
     <script>
-        // 1. Отримуємо доступ до елементів DOM
         const target = document.getElementById("target");
         const scoreText = document.getElementById("scoreText");
         const timeText = document.getElementById("timeText");
+        const levelText = document.getElementById("levelText");
 
         // Змінні стану гри
         let score = 0;
-        let timeLeft = 3; // Час на клік (в секундах)
+        let currentLevelTime = 3; // Базовий час, який дається на поточному рівні
+        let timeLeft = currentLevelTime; 
+        let targetSize = 50; // Початковий розмір квадрата
         let timerId;
 
-        // 2. Функція для переміщення квадрата у випадкове місце
         function moveTarget() {
-            // Визначаємо максимальні координати X та Y, щоб квадрат не виходив за екран
             const maxX = window.innerWidth - target.offsetWidth;
             const maxY = window.innerHeight - target.offsetHeight;
 
-            // Генеруємо випадкові координати
-            // Додаємо 100 до Y, щоб квадрат не перекривав текст зверху
             const randomX = Math.floor(Math.random() * maxX);
-            const randomY = Math.floor(Math.random() * (maxY - 100)) + 100;
+            // Залишаємо відступ зверху, щоб квадрат не перекривав текст
+            const randomY = Math.floor(Math.random() * (maxY - 140)) + 140;
 
-            // Застосовуємо координати
             target.style.left = randomX + "px";
             target.style.top = randomY + "px";
         }
 
-        // 3. Функція для управління таймером
         function startTimer() {
-            // Очищаємо попередній таймер, якщо він був
             clearInterval(timerId);
-            
-            // Запускаємо новий інтервал (виконується щосекунди)
             timerId = setInterval(function() {
-                timeLeft--; // Зменшуємо час на 1
-                timeText.textContent = "time left for click: " + timeLeft; // Оновлюємо текст
+                timeLeft--;
+                timeText.textContent = "time left for click: " + timeLeft;
 
-                // Якщо час вийшов
                 if (timeLeft <= 0) {
-                    clearInterval(timerId); // Зупиняємо таймер
-                    alert("Гра закінчена! Ваш рахунок: " + score); // Виводимо результат
-                    resetGame(); // Скидаємо гру
+                    clearInterval(timerId);
+                    alert("Гра закінчена! Ваш рахунок: " + score);
+                    resetGame();
                 }
-            }, 1000); // 1000 мілісекунд = 1 секунда
+            }, 1000);
         }
 
-        // 4. Функція для скидання гри до початкового стану
         function resetGame() {
+            // Скидаємо всі змінні до початкових значень
             score = 0;
-            timeLeft = 3;
+            currentLevelTime = 3;
+            timeLeft = currentLevelTime;
+            targetSize = 50; 
+            
+            // Відновлюємо розмір квадрата
+            target.style.width = targetSize + "px";
+            target.style.height = targetSize + "px";
+            
+            // Оновлюємо текст
             scoreText.textContent = "score: " + score;
             timeText.textContent = "time left for click: " + timeLeft;
+            levelText.textContent = "level: 1";
+            
             moveTarget();
-            // Таймер не запускаємо, поки гравець не клікне перший раз
             clearInterval(timerId); 
         }
 
-        // 5. Обробник події кліку по червоному квадрату
         target.addEventListener("click", function() {
-            score++; // Збільшуємо рахунок
-            timeLeft = 3; // Оновлюємо час на клік
+            score++;
+            
+            // --- ЛОГІКА ПРОГРЕСИВНОЇ СКЛАДНОСТІ ---
+            
+            // 1. Зменшуємо розмір квадрата з кожним кліком (мінімум до 15px)
+            if (targetSize > 15) {
+                targetSize -= 2; 
+                target.style.width = targetSize + "px";
+                target.style.height = targetSize + "px";
+            }
 
-            // Оновлюємо текст на сторінці
+            // 2. Кожні 5 балів ускладнюємо гру, зменшуючи час на клік (мінімум до 1 секунди)
+            if (score % 5 === 0 && currentLevelTime > 1) {
+                currentLevelTime--;
+            }
+            
+            // Вираховуємо рівень складності для відображення (1, 2, 3)
+            let level = 4 - currentLevelTime; 
+            levelText.textContent = "level: " + level;
+            
+    
+
+            // Оновлюємо час таймера до нового ускладненого значення
+            timeLeft = currentLevelTime; 
             scoreText.textContent = "score: " + score;
             timeText.textContent = "time left for click: " + timeLeft;
 
-            moveTarget(); // Рухаємо квадрат
-            startTimer(); // Перезапускаємо таймер
+            moveTarget();
+            startTimer();
         });
 
-        // Ініціалізація гри при завантаженні сторінки
         resetGame();
 
     </script>
